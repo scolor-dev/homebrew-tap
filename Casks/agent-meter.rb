@@ -1,6 +1,6 @@
 cask "agent-meter" do
-  version "1.0.0"
-  sha256 "a763b1469a270d5139c269b6024449ae3871f96ca913a752b0915f30f84ed082"
+  version "1.0.1"
+  sha256 "6f363b865c0b12e2f892c77639232fda9dc5d88b2197a188135ba62e31c9dee2"
 
   url "https://github.com/scolor-dev/agent-meter/releases/download/v#{version}/AgentMeter-#{version}.zip"
   name "Agent Meter"
