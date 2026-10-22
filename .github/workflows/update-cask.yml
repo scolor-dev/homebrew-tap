@@ -1,0 +1,55 @@
+name: Update cask
+
+on:
+  schedule:
+    # Hourly; GitHub may delay scheduled runs. Run the workflow by hand for an immediate update.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (default: latest stable release)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-cask
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update the cask
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: scripts/update-cask.sh "$RELEASE_TAG"
+
+      - name: Check the cask
+        run: |
+          if [ -f Casks/agent-meter.rb ]; then
+            ruby -c Casks/agent-meter.rb
+            # brew style only accepts casks that live in a tap, so check a copy in a throwaway one.
+            brew tap-new --no-git local/check
+            mkdir -p "$(brew --repository)/Library/Taps/local/homebrew-check/Casks"
+            cp Casks/agent-meter.rb "$(brew --repository)/Library/Taps/local/homebrew-check/Casks/"
+            brew style --cask local/check/agent-meter
+          fi
+
+      - name: Commit and push
+        run: |
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard Casks)" ]; then
+            echo "No change."
+            exit 0
+          fi
+          version="$(sed -n 's/^  version "\(.*\)"$/\1/p' Casks/agent-meter.rb | head -1)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/agent-meter.rb
+          git commit -m "chore: update agent-meter to $version"
+          git push
